@@ -50,12 +50,12 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 				pass
 			[os.remove(f) for f in os.listdir(".") if f.endswith(".ts") or f.endswith(".m3u8")]
 			if DEBUG:
-				popen_args = shlex.split("ffmpeg -i "+url+" -acodec copy -vcodec copy -bsf:v h264_mp4toannexb -flags -global_header -hls_time 5 -hls_wrap 15 -hls_flags delete_segments -hls_base_url "+SERVER_URL+" out.m3u8")
+				popen_args = shlex.split('gst-launch-1.0 uridecodebin uri='+url+' name=decbin ! queue ! videoconvert ! omxh264enc target-bitrate=2000000 control-rate=variable ! "video/x-h264,profile=high,width=1280,height=720" ! mpegtsmux name=muxer ! hlssink max-files=15 playlist-root='+SERVER_URL+' decbin. ! queue ! audioconvert ! voaacenc ! muxer.')
 			else:
-				popen_args = shlex.split("ffmpeg -v -8 -i "+url+" -acodec copy -vcodec copy -bsf:v h264_mp4toannexb -flags -global_header -hls_time 5 -hls_wrap 15 -hls_flags delete_segments -hls_base_url "+SERVER_URL+" out.m3u8")
+				popen_args = shlex.split('gst-launch-1.0 uridecodebin uri='+url+' name=decbin ! queue ! videoconvert ! omxh264enc target-bitrate=2000000 control-rate=variable ! "video/x-h264,profile=high,width=1280,height=720" ! mpegtsmux name=muxer ! hlssink max-files=15 playlist-root='+SERVER_URL+' decbin. ! queue ! audioconvert ! voaacenc ! muxer.')
 			current_process = subprocess.Popen(popen_args,stderr=subprocess.STDOUT,stdout=logfile)
 			attempt = 0
-			while not os.path.exists('out.m3u8') and current_process.poll() is None:
+			while not os.path.exists('playlist.m3u8') and current_process.poll() is None:
 				attempt += 1
 				time.sleep(2)
 				if attempt > 30:
@@ -63,7 +63,7 @@ class MyRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
 		current_url = url
 		self.protocol_version='HTTP/1.0'
         	self.send_response(302)
-        	self.send_header('Location', SERVER_URL+'out.m3u8')
+        	self.send_header('Location', SERVER_URL+'playlist.m3u8')
         	self.end_headers()
         else:
 		return SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
